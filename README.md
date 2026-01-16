@@ -18,4 +18,4 @@
 - [PROJECTS.md](PROJECTS.md) - All my big projects put to motion.
 
 ## 🐧 In the end
-> Remember, at the end of the day, is the end of the day 🐧💀. Okay, just kidding, at the end of the day, I don't want to be lost, I want to be structured, so here I am following a plan I made in January 16th 2026.
+> Remember, at the end of the day, is the end of the day 🐧💀. Okay, just kidding, at the end of the day, I don't want to be lost, I want to be structured, so here I am following a plan I made on January 16th, 2026.
