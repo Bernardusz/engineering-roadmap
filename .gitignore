@@ -1,0 +1,7 @@
+# Ignore all uppercase directories (My Private Folders)
+/[A-Z]*/
+
+# Ignore Obsidian system files
+.obsidian/
+
+Bernardusz's\ Headquarters.md
