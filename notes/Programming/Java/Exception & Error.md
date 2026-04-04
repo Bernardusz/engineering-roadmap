@@ -352,3 +352,79 @@ public class DuplicateBookException extends Exception {
 
 Chore: Learn how Java prevents Errors inside the JVM
 Credit: Once again <https://www.geeksforgeeks.org/java/> saves the day 🐧
+
+## The Death of Undefined Behavior, Long Live Safety! - Day 2
+> **Shalom**! 🐧 I have been very busy these days. I got home at 4 AM yesterday and slept after Good Friday mass for ~10 Hours. SO now, before Easter Vigil mass, let's finish this one.
+
+### 1. JVM is written in what?
+> JVM implementation depends on what type of JDK it is, but mostly (includes OpenJDK), JVM is written in C++, the language where it's famous for blowing your whole leg off 🐧💀.
+> So now we know JVM is literally written in a language where [[Undefined Behavior|Segfault]] and [[Undefined Behavior|Undefined Behavior]] are daily foods, how can Java be safe?
+
+### 2. Humans are inconsistent; a machine is 0 or 1
+> Humans make mistakes, and that is our nature; even I made mistakes. Human doesn't operate in 0 or 1; we are unpredictable and make mistakes
+> Machine, on the other hand, only understands 0 and 1, no maybe, no 0.5, no "I am lazy, so others will handle this." 🐧💀
+> So, once coded in place, the JVM will always act according to the code; it will free when [[Collections, Advanced Types & The Memory Cost | Garbage Collection]] sweeps in, it won't forget, it won't double-free.
+> 
+### 3. JVM is Proactive, Not Reactive
+> So in JVM, you don't manually manage memory, which eliminates half of the cause of UB and Segfault. But there are some cases where the JVM prevents UB
+
+#### Prevented by the language
+> Basically, most memory-management related Undefined Behavior, which occurs when programmers need to do things manually are prevented.
+> Because there is no `free()`, no `malloc()`, and you don't manually manage memory yourself, dangling pointer, Uninitialized pointer, can't happen
+> And there are some conditions that the programmers are unable to create, unless it's the language/JVM itself that is broken, like Buffer Overflow.
+> However, there is a unique case for signed integer overflow, which wraps around to the negative value
+
+#### Prevented by Exception
+> So even though most of manual memory management had been removed, there are still cases where UB can happen, like a null pointer. Remember, Java references are a "[[Pointer|Pointer]]" to the heap, so this triggers an Exception and gracefully crashes the program
+
+```java
+
+public class Main {
+    public static void main(String[] args) {
+		String myString = null;
+		System.out.println(myString.length());
+	}
+}
+```
+
+```bash
+bernardus@DESKTOP-3HNT5JD:~/projects/cli/my-java-cli/src$ java Main
+Exception in thread "main" java.lang.NullPointerException: Cannot invoke "String.length()" because "<local1>" is null
+        at Main.main(Main.java:5)
+```
+
+> The same with out-of-bound Array, instead of letting a leak, Java checks the index of an Array and prevents it from happening
+
+```java
+
+public class Main {
+    public static void main(String[] args) {
+		int[] myIntArray = new int[4];
+
+		for (int i = 0; i < 10; i++){
+			myIntArray[i] = i;
+		}
+	}
+}
+```
+
+```bash
+bernardus@DESKTOP-3HNT5JD:~/projects/cli/my-java-cli/src$ java Main.java
+Exception in thread "main" java.lang.ArrayIndexOutOfBoundsException: Index 4 out of bounds for length 4
+        at Main.main(Main.java:7)
+```
+
+> Remember, Error = Your computer is on fire, Checked Exception = Plan B for User/Runtime's error, Unchecked Exception = YOU are at fault 🐧💀 
+### 4. SO how does JVM prevents Error by using Exception
+> In C, an Array out of bound index means you access your neighboring memory size, and if you dereference an Uninitialized/Null pointer, sometimes maybe [[Undefined Behavior|Undefined Behavior]], sometimes maybe `SIGSEV` 🐧💀
+> But in Java, nah. After most of the cause of UB is eliminated by the language's nature, most of the remaining Undefined Behavior cause, like Array out of bounds or Null pointer, are prevented by two types of failure handling
+
+#### Proactive Handling
+> Java doesn't let you walk into someone else's house (Address), it holds you back. Before each access, the JVM checks, "Are you accessing an index that is bigger than `array.length()`?" And act accordingly
+> But that is not the loop case, if you do a loop and the JVM sees `i' will always be smaller than `array.length()`, it skips the checks, making it superfast. Remember, JVM is smart and has been perfected over 31 years (1995 is the birth of Java) 🐧
+
+#### Reactive Handling
+> Now is the fun and nerdy stuffs, remember [[System Calls (Syscalls)|System Calls]]? If I let's say I have a `String myString = null;` and try `myString.length()`, would the JVM check on every access? No, that would be slow.
+> Instead of every memory management for whether it is accessing `0x0` or not, the JVM lets it be; it leaves this "unsafe" in the name of performance. But there is a catch, when you access a virtual memory you don't own, and the Page Fault is triggered, and the OS sees you are asking for `0x0`, instead of `SIGKILL`, the OS does something else because of JVM's [[System Calls (Syscalls) | Syscall]]
+> During the JVM initialization, it tells the Kernel: "Hey, I know I just did a massive mistake (`SIGSEGV`), don't shoot me with `SIGKILL`, instead jump to this specific address in memory to run my own sepukku" 🐧💀
+> So that's how you get `NullPointerException` in Java, instead of being bogged down by the OS, the process that lives on the third ring has its own way of handling "errors" and that is called Exception in Java, pretty nice 🐧👍
