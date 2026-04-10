@@ -155,3 +155,234 @@ public class Main {
 > In Java stream is unidirectional data. So every Open (`FileInputStream` or `FileOutputStream`) needs a separate FD for read and write.
 
 > A bit simple, because I am joking with my friends 🐧💀. Tomorrow we got serious.
+
+## Java Way of I/O
+> **Shalom**! 🐧And as you can see, I am running out of imagination for titles 💀🐧SO let's just get started.
+
+### 1. Java's Philosophy: Global-attempt
+> Java basically bet on the wrong horse, or rather, wrong penguin 🐧💀
+ 
+In the early 90s (when Java was born in 1995), the Unicode Consortium believed 65536 characters would be enough for every language on Earth forever, the same bet IPv4 made.
+
+Sun Microsystems, who build Java, also jumped on this UCS-2 (precursor to UTF-16) because it sounds logical.
+
+Turns out, Ken Thompson (One of the GOAT 🐐 who co-created C and Unix) co-invented UTF-8 in a diner. It won because UTF-8 is the same as ASCII.
+
+Maths, Ancient symbols, and most importantly, Emojis 🐧💀 took over. UTF-16 loses its biggest advantage, and 🐧still takes 4 bytes and 4 UTF-8 chars 💀🐧.
+
+Changing UTF-16 to UTF-8 would break millions or billions of devices. Talk about suffering from your own success 🐧💀
+
+SO as a correction, in [[Collections, Advanced Types & The Memory Cost]] a char is actually 2 bytes in Java
+
+### 2.  From Zero to Hero: Streams vs. Readers
+> Bruh 🐧What title did I just write 💀. SO okay, after we translate C's Open/Read/Write/Close, we will see Java way of I/O, specifically files. This is because in WIndows/Linux, Internet and basically everyone follow the UTF-8 conventions, we need a translator.
+> In our earlier example we showed using Bytes and translating it to String manually and vice versa for read, due to Java's UTF-16 nature.
+
+```java
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+		String currentDir = System.getProperty("user.dir");
+		System.out.println("Working Directory: " + currentDir);
+		try (
+			FileInputStream fis = new FileInputStream(currentDir + "/src/Main.java");
+			FileOutputStream fos = new FileOutputStream(currentDir + "/src/Main.java", true);
+			FileReader fr = new FileReader(currentDir + "/src/Main.java");
+			FileWriter fileWriter = new FileWriter(currentDir + "/src/Main.java", true);
+			InputStreamReader isr = new InputStreamReader(fis, "UTF-8");
+			OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
+			){
+			char[] buffer = new char[1024];
+			int charsRead;
+
+			// 2. Read into the bucket until the end (-1)
+			while ((charsRead = fr.read(buffer)) != -1) {
+				// 3. Print exactly what was read
+				System.out.print(new String(buffer, 0, charsRead));
+			}
+
+			char[] ISRBuffer = new char[1024];
+			int charsReadISR;
+
+			while ((charsReadISR = isr.read(ISRBuffer)) != -1) {
+				System.out.print(new String(ISRBuffer, 0, charsReadISR));
+			}
+
+			fileWriter.write("// New data");
+			fileWriter.flush();
+
+			osw.write("// New data");
+			osw.flush();
+		}
+		catch(Exception e){
+			System.out.println(e);
+		}
+	}
+}// New data// New data
+// New data// New data
+```
+
+```bash
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+		String currentDir = System.getProperty("user.dir");
+		System.out.println("Working Directory: " + currentDir);
+		try (
+			FileInputStream fis = new FileInputStream(currentDir + "/src/Main.java");
+			FileOutputStream fos = new FileOutputStream(currentDir + "/src/Main.java", true);
+			FileReader fr = new FileReader(currentDir + "/src/Main.java");
+			FileWriter fileWriter = new FileWriter(currentDir + "/src/Main.java", true);
+			InputStreamReader isr = new InputStreamReader(fis, "UTF-8");
+			OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
+			){
+			char[] buffer = new char[1024];
+			int charsRead;
+
+			// 2. Read into the bucket until the end (-1)
+			while ((charsRead = fr.read(buffer)) != -1) {
+				// 3. Print exactly what was read
+				System.out.print(new String(buffer, 0, charsRead));
+			}
+
+			char[] ISRBuffer = new char[1024];
+			int charsReadISR;
+
+			while ((charsReadISR = isr.read(ISRBuffer)) != -1) {
+				System.out.print(new String(ISRBuffer, 0, charsReadISR));
+			}
+
+			fileWriter.write("// New data");
+			fileWriter.flush();
+
+			osw.write("// New data");
+			osw.flush();
+		}
+		catch(Exception e){
+			System.out.println(e);
+		}
+	}
+}// New data// New data
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+		String currentDir = System.getProperty("user.dir");
+		System.out.println("Working Directory: " + currentDir);
+		try (
+			FileInputStream fis = new FileInputStream(currentDir + "/src/Main.java");
+			FileOutputStream fos = new FileOutputStream(currentDir + "/src/Main.java", true);
+			FileReader fr = new FileReader(currentDir + "/src/Main.java");
+			FileWriter fileWriter = new FileWriter(currentDir + "/src/Main.java", true);
+			InputStreamReader isr = new InputStreamReader(fis, "UTF-8");
+			OutputStreamWriter osw = new OutputStreamWriter(fos, "UTF-8");
+			){
+			char[] buffer = new char[1024];
+			int charsRead;
+
+			// 2. Read into the bucket until the end (-1)
+			while ((charsRead = fr.read(buffer)) != -1) {
+				// 3. Print exactly what was read
+				System.out.print(new String(buffer, 0, charsRead));
+			}
+
+			char[] ISRBuffer = new char[1024];
+			int charsReadISR;
+
+			while ((charsReadISR = isr.read(ISRBuffer)) != -1) {
+				System.out.print(new String(ISRBuffer, 0, charsReadISR));
+			}
+
+			fileWriter.write("// New data");
+			fileWriter.flush();
+
+			osw.write("// New data");
+			osw.flush();
+		}
+		catch(Exception e){
+			System.out.println(e);
+		}
+	}
+}// New data// New data
+```
+
+`flush()` so Java doesn't hog the data in JVM's RAM and immediately does it.
+
+A simple InputStream, or OutputStream doesn't care about your bytes, it is just a dumb pipe. If you shove UTF-8 to Java's UTF-16 nature, Java will show garbage.
+
+Reader on the other hand converts them directly from UTF-8 to Java's UTF-16. And `InputStreamReader` or `OutputStreamReader` will convert your Input/Output stream to a Reader, which can be applied to a socket.
+
+### 3. The Robust Warehouse - `BufferedReader` & `BufferedWriter`
+> The GOAT for reading line.🐐 It is a wrapper for Reader. Everytime you call `.read()` in `FileReader` or `InputStreamReader` they go to the disk. But for `BufferedReader` it grabs a massive chunk once and puts them in RAM. the next chars you just take from RAM.
+> While `BufferedWriter` does the same but with writing: Holds everything in one massive chunk before going to the disk to save CPU cycles.
+
+Because it grabs huge chunk of memory, you can see `\n` and `\r`. which brings the legendary `.readLine()` method.
+
+```java
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+		String currentDir = System.getProperty("user.dir");
+		System.out.println("Working Directory: " + currentDir);
+		try (
+			BufferedReader br = new BufferedReader(new FileReader(currentDir + "/src/Main.java"));
+			BufferedWriter bw = new BufferedWriter(new FileWriter(currentDir + "/src/Main.java", true));
+		){
+
+			String line;
+			// readLine() handles the buffer, the newline searching,
+			// and the String creation for you.
+			while ((line = br.readLine()) != null) {
+				System.out.println(line);
+			}
+
+			bw.write("// Hello World");
+			bw.newLine();
+			bw.flush();
+
+		}
+		catch(Exception e){
+			System.out.println(e);
+		}
+	}
+}// New data// New data
+// New data// New data// Hello World
+// Hello World
+
+```
+
+```bash
+import java.io.*;
+
+public class Main {
+    public static void main(String[] args) {
+		String currentDir = System.getProperty("user.dir");
+		System.out.println("Working Directory: " + currentDir);
+		try (
+			BufferedReader br = new BufferedReader(new FileReader(currentDir + "/src/Main.java"));
+			BufferedWriter bw = new BufferedWriter(new FileWriter(currentDir + "/src/Main.java", true));
+		){
+
+			String line;
+			// readLine() handles the buffer, the newline searching,
+			// and the String creation for you.
+			while ((line = br.readLine()) != null) {
+				System.out.println(line);
+			}
+
+			bw.write("// Hello World");
+			bw.newLine();
+			bw.flush();
+
+		}
+		catch(Exception e){
+			System.out.println(e);
+		}
+	}
+}// New data// New data
+// New data// New data// Hello World
+
+```
