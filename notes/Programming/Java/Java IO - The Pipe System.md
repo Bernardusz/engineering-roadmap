@@ -1,3 +1,7 @@
+---
+banner: "![[download (2).jpeg]]"
+---
+
 ## The Raw Bytes
 > **Shalom!** 🐧 I am free from duties and assignments, now let's go 🐧🐧🐧
 
@@ -386,3 +390,268 @@ public class Main {
 // New data// New data// Hello World
 
 ```
+
+## NIO - Java I/O Reborn anew 🐧💀
+> **Shalom**! 🐧I woke up late today, cause... letś say my alarm didn´t go off... 💀 SO let's finish this ASAP.
+
+### 1. NIO - New I/O 🐧🌟
+> Introduced in Java 1.4 and updated in Java 7, it is a new way to do file I/O and takes on a different approach compared to Stream or Reader.
+
+So let's go back to [[System Calls (Syscalls)|System Calls]] as every process, which a JVM is, needs to interact with hardware.
+
+In [[System Calls (Syscalls)|System Calls]] we remember about `mmap()`? In C, it is basically a way to get memory in the heap via system calls. But in Java, it is a bit different.
+
+In Java, we have [[JVM Architecture & WORA |The Heap]], remember? Now there are 2 types of Heap: The "Heap" and Off-Heap/Native Memory.
+
+The Heap is what we learned: JVM/GC manages it. While Off-Heap/Native Memory is managed manually by the programmer/O, S with caveats, which will be explained later.
+
+### 2. Buffer - The Gate Keeper 🐧🛡
+> Buffer is a place where you put your data before you write it somewhere else/access it somewhere else.
+
+In I/O, you write it directly to a `byte[]` or copy it from a `BufferedReader` or read line by line with `FileReader`. But in NIO, you use a `ByteBuffer` that comes in 2 flavors:
+
+- `HeapByteBuffer`: IT lives on the JVM Head
+	When you eventually tell the OS to write this buffer to disk, the JVM has to copy the data to a temporary hidden "Direct" buffer first. Because GC might move your heap-array mid-syscall.
+- DirectByteBuffer`: Lives in Native/Off-Heap memory
+	- The JVM basically does C stuff: gives a raw pointer (`void*`). There is no copying. The Kernel writes directly from your RAM to the Disk controller.
+	
+```java
+import java.io.*;
+import java.nio.*;
+public class Main {
+    public static void main(String[] args) {
+		ByteBuffer directBuffer = ByteBuffer.allocateDirect(1024);
+		directBuffer.put("Hello World".getBytes());
+		directBuffer.flip();
+		System.out.println(directBuffer);
+		directBuffer.clear();
+		directBuffer.put("Hello World".getBytes());
+		directBuffer.flip();
+		System.out.println(directBuffer);
+		directBuffer.clear();
+
+	}
+}// New data// New data
+// New data// New data// Hello World
+// Hello World
+
+```
+
+```bash
+java.nio.DirectByteBuffer[pos=0 lim=11 cap=1024]
+java.nio.DirectByteBuffer[pos=0 lim=11 cap=1024]
+```
+
+However, you might get suspicious if DirectByteBuffer lives on the Off-Heap, and is unmanaged by GC, and it was created using mmap, how can we call `munmap()`? The reason is... GC 🐧💀
+
+So when you create a DirectByteBuffer, Java creates a small "Shadow Object" called a `Cleaner`. Both the Buffer and Cleaner live on the heap. 
+
+The Cleaner holds the Deallocater that knows how to call `munmap` or `unsafe.freeMemory`. So the cycle looks like this:
+
+1. Reference Loss: You set your DirectByteBuffer to null.
+2. GC Discovery: During the next Garbage Collection cycle, the GC sees that the Buffer object is unreachable.
+3. The Phantom Queue: Instead of just deleting the object, the JVM places the associated Cleaner into a special "Reference Queue."
+4. The Reference Handler Thread: A high-priority background thread in the JVM is constantly watching this queue. It pulls the Cleaner out and runs its clean() method.
+5. The Syscall: The clean() method finally executes the native code that calls munmap() or free() in the OS.
+
+Remember when I said let GC do its thing in [[Collections, Advanced Types & The Memory Cost]]? This time we need to interfere, because GC only triggers when the JVM Heap is full, so if you keep creating a direct buffer while the JVM Heap is empty, eventually the Gate Keeper will call in the final boss of processes: `OutOfMemory` error 🐧💀
+
+So you can use a manual cleaner, which can trigger [[Undefined Behavior|Undefined Behavior]] or worse, Segfault 🐧💀, or use the modern way: arena
+
+```java
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.lang.foreign.*;
+//import java.nio.channels.FileChannel;
+//import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        Path path = Path.of("day3_reality.bin");
+        long fileSize = 1024;
+
+        // 1. Create your Arena (The Scope)
+        try (Arena arena = Arena.ofShared()) {
+
+            // 2. Open a FileChannel first (The C-style fd)
+            try (FileChannel channel = FileChannel.open(path,
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE)) {
+
+                // 3. Use the channel to map the memory
+                // In JDK 25, map() is a method of FileChannel
+                MemorySegment segment = channel.map(
+                    FileChannel.MapMode.READ_WRITE,
+                    0,
+                    fileSize,
+                    arena // Pass the arena here to bind the lifecycle
+                );
+
+                // 4. Access the memory
+                segment.set(ValueLayout.JAVA_INT, 0, 0xDEADC0DE);
+                System.out.printf("Wrote Magic: 0x%X%n", segment.get(ValueLayout.JAVA_INT, 0));
+
+            } // FileChannel closes here (Standard OS cleanup)
+        } // <--- ARENA CLOSES HERE: munmap() is called IMMEDIATELY
+
+        System.out.println("Memory unmapped. Robustness achieved! 🐧");
+    }
+}
+
+```
+
+```bash
+Wrote Magic: 0xDEADC0DE
+Memory unmapped. Robustness achieved! 🐧
+```
+
+Arena is basically the boss of memory management. When the Arena goes out of scope, it calls `munmap()` immediately, ensuring memory safety. Basically, [[Memory|RAII]] in practice.
+
+FileChannel will be explained later. Just now, I am using JDK25, and will use the latest official way for NIO.
+
+### 3. Path, Channel, and Segment - The Trio of NIO 🐧🐧🐧
+> So in the previous section, we already saw that Arena is the one managing memory lifetime, so now we have **Path**, **Channel**, and **Segment** as the way to do I/O efficiently and safely.
+
+Think of it like this:
+
+| Feature       | What it is in C | Explanation                                                                                 |
+| ------------- | --------------- | ------------------------------------------------------------------------------------------- |
+| Path          | `char[]`        | It is just an Object holding the path to the file we're dealing with.                       |
+| FileChannel   | `open()` -> fd  | It opens the file and is the file descriptor that gives us access to the file. |
+| MemorySegment | `void*`         | It calls `mmap()` under the hood, putting the file in RAM, so when you write                |
+```java
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.lang.foreign.*;
+import java.nio.file.StandardOpenOption;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        Path path = Path.of(System.getProperty("user.dir") + "/src/main/java/main.txt");
+        long fileSize = 1024;
+
+        // 1. Create your Arena (The Scope)
+        try (Arena arena = Arena.ofShared()) {
+
+            // 2. Open a FileChannel first (The C-style fd)
+            try (FileChannel channel = FileChannel.open(path,
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE)) {
+
+                // 3. Use the channel to map the memory
+                // In JDK 25, map() is a method of FileChannel
+                MemorySegment segment = channel.map(
+                    FileChannel.MapMode.READ_WRITE,
+                    0,
+                    fileSize,
+                    arena // Pass the arena here to bind the lifecycle
+                );
+                String s1 = "Hello World!\n";
+                String s2 = "Hello Penguin 🐧";
+
+// Use the byte size of the strings to find the next available slot
+                segment.setString(0, s1);
+                segment.setString(s1.getBytes().length, s2);
+                String text = segment.getString(0L, java.nio.charset.StandardCharsets.UTF_8);
+
+                System.out.println(text);
+                channel.truncate(s1.getBytes().length + s2.getBytes().length);
+            } // FileChannel closes here (Standard OS cleanup)
+        } // <--- ARENA CLOSES HERE: munmap() is called IMMEDIATELY
+
+        System.out.println("Memory unmapped. Robustness achieved! 🐧");
+    }
+}
+
+```
+
+```bash
+Hello World!
+Hello Penguin 🐧
+Memory unmapped. Robustness achieved! 🐧
+```
+
+### 4. Little-Endian & Big-Endian - How do we write a number 🐧❓
+> So Endianness is simply the rule that determines the order in which a sequence of bytes is stored in memory for data that has more than a single byte; the CPU has to decide which one goes first.
+
+#### Big-Endian - The Human Order
+> It stores the Most Significant Byte at the lowest memory address, the same way human reads number from left to right (10 > 01)
+
+#### Little-Endian - The Hardware Order
+> It is basically the reversal of Little-Endian and used by machines because of addition and type casting. Remember Column Addition in primary school? Yep, that's it.
+
+Because in addition, you start with the least significant number, and in other terms, ms, from behind. And CPU is just massive arithmetic. SO Little-Endian becomes standard.
+
+But the Big-Endian becomes standard for internet/ TCP-IP, Thatś why Java provides a way to set what you are typing.
+
+```java
+import java.nio.ByteOrder;
+import java.nio.channels.FileChannel;
+import java.nio.file.Path;
+import java.lang.foreign.*;
+import java.nio.file.StandardOpenOption;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        Path path = Path.of(System.getProperty("user.dir") + "/src/main/java/main.txt");
+        long fileSize = 1024;
+
+        // 1. Create your Arena (The Scope)
+        try (Arena arena = Arena.ofShared()) {
+
+            // 2. Open a FileChannel first (The C-style fd)
+            try (FileChannel channel = FileChannel.open(path,
+                StandardOpenOption.READ,
+                StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE)) {
+
+                // 3. Use the channel to map the memory
+                // In JDK 25, map() is a method of FileChannel
+                MemorySegment segment = channel.map(
+                    FileChannel.MapMode.READ_WRITE,
+                    0,
+                    fileSize,
+                    arena // Pass the arena here to bind the lifecycle
+                );
+                String s1 = "Hello World!\n";
+                String s2 = "Hello Penguin 🐧";
+
+// Use the byte size of the strings to find the next available slot
+                segment.setString(0, s1);
+                segment.setString(s1.getBytes().length, s2);
+                String text = segment.getString(0L, java.nio.charset.StandardCharsets.UTF_8);
+
+                System.out.println(text);
+                // Force Little-Endian for your .bin file
+                var beInt = ValueLayout.JAVA_INT_UNALIGNED.withOrder(ByteOrder.BIG_ENDIAN);
+                segment.set(beInt, s1.getBytes().length + s2.getBytes().length, 1024);
+                channel.truncate(s1.getBytes().length + s2.getBytes().length + beInt.byteSize());
+
+                // Read it back from the same offset
+                int value = segment.get(beInt, 31);
+                System.out.println("The value is: " + value); // This will print 1024
+            } // FileChannel closes here (Standard OS cleanup)
+        } // <--- ARENA CLOSES HERE: munmap() is called IMMEDIATELY
+
+        System.out.println("Memory unmapped. Robustness achieved! 🐧");
+    }
+}
+
+```
+And I just get a revelation: Endianness doesn´t matter in .txt files 🐧💀 I am writing raw bytes to .txt instead of ASCII. Endianess mostly matters in Networking due to Big-Endian being mandatory.
+```bash
+Hello World!
+Hello Penguin 🐧
+The value is: 1024
+Memory unmapped. Robustness achieved! 🐧
+```
+
+### 4. System.out | System.in | System.err - Already opened FD 🚪🐧
+> SO remember in [[System Calls (Syscalls)|System Calls]]? `printf()` is just `open()` to an already open file descriptor: 1?
+> File Descriptors 0, 1, and 2 are reserved for Stdin, Stdout, and Stderr.
+> And Java just wraps them nicely in System.out, System.in, and System.err.
+
+That's it for day 3 🐧
