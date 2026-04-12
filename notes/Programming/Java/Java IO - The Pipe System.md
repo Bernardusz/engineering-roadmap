@@ -581,7 +581,7 @@ Memory unmapped. Robustness achieved! 🐧
 > It stores the Most Significant Byte at the lowest memory address, the same way human reads number from left to right (10 > 01)
 
 #### Little-Endian - The Hardware Order
-> It is basically the reversal of Little-Endian and used by machines because of addition and type casting. Remember Column Addition in primary school? Yep, that's it.
+> It is basically the reversal of Big-Endian and used by machines because of addition and type casting. Remember Column Addition in primary school? Yep, that's it.
 
 Because in addition, you start with the least significant number, and in other terms, ms, from behind. And CPU is just massive arithmetic. SO Little-Endian becomes standard.
 
