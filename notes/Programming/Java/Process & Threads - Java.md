@@ -771,3 +771,72 @@ class Room {
     }
 }
 ```
+
+## PenguinSearch 🐧🔍
+
+A lightning-fast, highly concurrent command-line file search utility. Think of it as a modern, mini-`grep` written in Java.
+
+Repo link: <https://github.com/Bernardusz/PenguinSearch/>
+
+PenguinSearch recursively scans a directory tree to find occurrences of a specific keyword. It is engineered for maximum throughput and memory safety by leveraging **Java 21 Virtual Threads (Project Loom)** and **NIO Streams**.
+
+## ✨ Features
+
+* **Massive Concurrency:** Spawns a lightweight Virtual Thread for *every single file* encountered, bypassing OS-level thread bottlenecks.
+* **Memory Safe:** Uses NIO `Files.lines()` to stream files line-by-line. It can search a 10GB log file while keeping your RAM usage flat.
+* **High-Speed Parsing:** Uses a zero-allocation "Sliding Window" algorithm (`indexOf`) instead of expensive Regex/String splitting.
+* **Thread-Safe Counting:** Uses `AtomicInteger` with CPU-level Compare-And-Swap (CAS) instructions to prevent data races.
+* **Case-Insensitive Mode:** Optional flag to ignore case during the search.
+
+## 🛠️ Prerequisites
+
+* **Java 21 or higher** is strictly required (due to the use of `Executors.newVirtualThreadPerTaskExecutor()`).
+
+## 🚀 Getting Started
+
+### 1. Compile the Code
+Open your terminal and compile the `Main.java` file:
+```bash
+javac Main.java
+```
+
+### 2. Run the Tool
+The basic syntax requires two arguments: the word to find and the target directory.
+```bash
+java Main <keyword> <directory_path> [--not-sensitive]
+```
+
+## 📖 Usage Examples
+
+### Example 1: Standard Exact Match
+Search for the exact word "TODO" in the ./src folder:
+
+```bash
+java Main TODO ./src
+```
+Output:
+```Plaintext
+Found 42 instances of 'TODO'
+Time taken: 154ms
+```
+
+### Example 2: Case-Insensitive Search
+Search for "penguin", "Penguin", or "PENGUIN" in the /var/logs folder:
+
+```bash
+java Main penguin /var/logs --not-sensitive
+```
+
+Output:
+```Plaintext
+Found 891 instances of 'penguin'
+Time taken: 312ms
+```
+
+## 🧠 Architecture Highlights
+For the curious engineers, here is how PenguinSearch achieves its performance:
+
+1. The Scout (Files.walk): A main thread lazily streams the directory tree, filtering for regular files.
+2. The Army (Virtual Threads): For every file, a task is submitted to an infinite virtual thread pool. If the disk is slow to read a file, the JVM instantly unmounts that virtual thread, keeping the physical CPU cores at 100% utilization on other files.
+3. The Sliding Window (indexOf): Instead of using String.split(), which creates massive arrays and garbage collection spikes, the parser slides an integer index across the string, tallying matches with zero memory overhead.
+
