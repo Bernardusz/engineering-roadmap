@@ -511,3 +511,263 @@ public class Main {
     }
 }
 ```
+
+## Modern Way of Threads 🧠🐧- Day 3
+> Yesterday we talked about Easy way, today we're doing Easy and Modern way of Threads. And yes I have slept, though it's not enough 🐧💀
+
+### 1. Future & Callable - "Can I order a <Burger>?" 🍔🐧
+> Do you understand Async in Java? Yep this is similiar to that but for Threads. You declare what you want from a Thread and it will give it to you when it's ready, otherwise, wait ⏰🐧
+
+```java
+import java.util.concurrent.*;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        Runnable task = () -> {
+            System.out.println("Task is running");
+        };
+
+        Callable<String> callable = () -> {
+            Thread.sleep(2000); // Simulating heavy DB query
+            return "User Profile Data: Admin";
+        };
+
+        Future<String> receipt = executor.submit(() -> {
+            Thread.sleep(2000); // Simulating heavy DB query
+            return "User Profile Data: Admin";
+        });
+
+        Future<String> secondReceipt = executor.submit(callable);
+
+
+
+        System.out.println("Doing other things while DB is queried...");
+
+        String result = receipt.get();
+        String secondResult = secondReceipt.get();
+
+        System.out.println("Got the data: " + result);
+        System.out.println("Got the data: " + secondResult);
+        executor.shutdown();
+    }
+}
+```
+
+### 2. Wait/Notify & Condition - "Notify me when you need my help" 🐧🥊
+> Why the boxing gloves? I don't know myself 🐧💀, But remember that CPU is a hyperactive child as we talked about in [[System Calls (Syscalls)|System Calls]] 💀? Yep, so it wants to use every nanosecond it has to do something.
+> So this is where Wait/Notify comes in:
+
+#### Wait/Notify - The Old Way
+> So before condition was introduced, this is how do we say "let me sleep, and when you have task for me, call me" 🛏🐧
+
+```java
+import java.util.concurrent.*;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        SharedBuffer buffer = new SharedBuffer();
+        executor.submit(() -> {
+            try {
+                buffer.produce();
+                buffer.produce();
+                buffer.produce();
+                buffer.produce();
+                buffer.produce();
+                buffer.consume();
+                buffer.consume();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        executor.shutdown();
+    }
+}
+
+class SharedBuffer {
+    private final int LIMIT = 5;
+    private int count = 0;
+
+    // You MUST be inside a synchronized block to call wait/notify
+    public synchronized void produce() throws InterruptedException {
+        while (count == LIMIT) {
+            wait(); // "I'm dropping the lock and napping until space opens"
+        }
+        count++;
+        System.out.println("Produced: " + count);
+        notifyAll(); // "Hey everyone, I just added data, check if you can work!"
+    }
+
+    public synchronized void consume() throws InterruptedException {
+        while (count == 0) {
+            wait(); // "I'm dropping the lock and napping until data arrives"
+        }
+        count--;
+        System.out.println("Consumed: " + count);
+        notifyAll(); // "Hey everyone, I just freed space!"
+    }
+}
+```
+
+#### Condition - The New Way
+> The problem with Wait/Notify is that you only have 2 methods for waking other Threads: `notify()` which notifies random people, or `notifyAll()` which, will literally wake everyone up
+> Condition allows you to create rooms, for example: In a house there would be someone wanting to use the bathroom. When the bathroom is free you only notify those who needs to use it, not the one who wants to use the kitchen 🐧💀
+
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        Room room = new Room();
+        executor.submit(() -> {
+            try {
+                room.useBathroom();
+                room.useKitchen();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+
+        executor.shutdown();
+    }
+}
+
+class Room {
+    private final Lock lock = new ReentrantLock();
+
+    private boolean isBathroomOccupied = false;
+    private boolean isKitchenOccupied = false;
+
+    private final Condition bathroomAvailable = lock.newCondition();
+    private final Condition kitchenAvailable  = lock.newCondition();
+
+    public void useBathroom() throws InterruptedException {
+        lock.lock();
+        try {
+            while (isBathroomOccupied) {
+                bathroomAvailable.await();
+            }
+            isBathroomOccupied = true;
+            System.out.println(Thread.currentThread().getName() + " is using the bathroom.");
+
+            Thread.sleep(500);
+
+            isBathroomOccupied = false;
+            bathroomAvailable.signalAll();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    public void useKitchen() throws InterruptedException {
+        lock.lock();
+        try {
+            while (isKitchenOccupied) {
+                kitchenAvailable.await();
+            }
+            isKitchenOccupied = true;
+            System.out.println(Thread.currentThread().getName() + " is using the kitchen.");
+
+            Thread.sleep(500);
+
+            isKitchenOccupied = false;
+            kitchenAvailable.signalAll();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+}
+```
+
+### 3. Virtual Threads - Infinite Penguin 🐧🐧🐧🐧
+> Everything we learned exists because Threads are expensive, like real expensive. Not as expensive as a process, but expensive still.
+> But now, in Java 21, we have what's called Virtual Threads.
+> As an analogy, do servers at restaurant wait for you to finish eating? Hell naw 🐧💀 They dissapear and serve other tables.
+> So basically Virtual Thread is a small Java object mounted to a few OS Threads.
+
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+        Room room = new Room();
+        for (int i = 0; i< 100000; i++){
+            executor.submit(() -> {
+                try {
+                    room.useBathroom();
+                    room.useKitchen();
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        executor.shutdown();
+    }
+}
+
+class Room {
+    private final Lock lock = new ReentrantLock();
+
+    private boolean isBathroomOccupied = false;
+    private boolean isKitchenOccupied = false;
+
+    private final Condition bathroomAvailable = lock.newCondition();
+    private final Condition kitchenAvailable  = lock.newCondition();
+
+    public void useBathroom() throws InterruptedException {
+        lock.lock();
+        try {
+            while (isBathroomOccupied) {
+                bathroomAvailable.await();
+            }
+            isBathroomOccupied = true;
+            System.out.println(Thread.currentThread().getName() + " is using the bathroom.");
+
+            Thread.sleep(500);
+
+            isBathroomOccupied = false;
+            bathroomAvailable.signalAll();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+
+    public void useKitchen() throws InterruptedException {
+        lock.lock();
+        try {
+            while (isKitchenOccupied) {
+                kitchenAvailable.await();
+            }
+            isKitchenOccupied = true;
+            System.out.println(Thread.currentThread().getName() + " is using the kitchen.");
+
+            Thread.sleep(500);
+
+            isKitchenOccupied = false;
+            kitchenAvailable.signalAll();
+        }
+        finally {
+            lock.unlock();
+        }
+    }
+}
+```
