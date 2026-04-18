@@ -314,3 +314,200 @@ Worker thread safely shut down.
 ```
 
 It's 11:07 PM 🐧💀 I need to sleep, So I am sorry if the grammar is very, very bad 🐧🙏
+
+## Easy Way for Threads 🐧🛹 - Day 2
+> **Shalom**! I'm still on 5 hours of sleep, I got a short story to write for assignments, another assignment... and yeah 🐧💀 So, let's finish this ASAP.
+> 
+### 1. ExecutorService - The Benevolent Manager 🐧📑
+> So Thread is a worker, and in C and Java, you need to be the CEO, Manager, and HRD... Tiring and prone to errors 🐧💀
+> So Java has an Object called ExecutorService that acts as a Manager. You drop the tasks it delegates tasks between workers.
+> So instead of a Thread/Worker doing a task and then get killed 🐧💀 That Thread will instead work on other tasks.
+
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+
+public class Main {
+    public static void main(String[] args) {
+        // 1. Define the TASK (Like your function pointer in C)
+        ExecutorService executor = Executors.newFixedThreadPool(4);
+
+        for (int i = 0; i < 10; i++) {
+            executor.submit(() -> {
+                System.out.println("Task is running");
+            });
+        }
+
+        executor.shutdown();
+
+        try {
+            if (!executor.awaitTermination(60, TimeUnit.SECONDS)) {
+                executor.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            executor.shutdownNow();
+            Thread.currentThread().interrupt();
+        }
+    }
+}
+```
+
+Why the try? Because it means, wake me (The Main Thread) when a Thread called `mainThread.interrupt()`. Which as we learned, how do you wake up a Thread immediatelt? Yup, Bonk Him with an `InterruptedException` 🐧🔨
+
+So other than executor signaling all Threads are closed or 1 minute has passed, a Thread inside worker can call interrupt on the mainThread, so that's why the try-catch
+
+### 2. Atomic Variable - CPU Life Hack 🐧🧠
+> I drank chocolate milk, now I am sleepy, too sleepy for my own good 🐧💀, Let's go.
+> So in [[Process & Threads|Process & Threads]] we learned about Context Switching between Threads is expensive. The same with Java's Thread.
+> So we have what's called Atomic Variable. Instead of switching Thread's state to BLOCKED, we do a special CPU's instruction: Compare-And-Swap (CAS). It's basically optimistic approach, it treis to switch first and handle error later.
+> TLDR; "Go to this variable and increment the value by 1 if the value is still 10, if it's changed, re do it until succesful."
+
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public  class Main {
+    public static void main(String[] args) {
+        Stats stats = new Stats();
+
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        for (int i = 0; i < 10; i++){
+            executor.submit(() -> {
+                stats.handleRequest();
+            });
+        }
+        executor.shutdown();
+    }
+}
+
+class Stats {
+    // This lives in the Shared Heap
+    private final AtomicInteger requestCount = new AtomicInteger(0);
+
+    public void handleRequest() {
+        // No 'synchronized' keyword needed!
+        // This uses the CPU's CAS instruction under the hood.
+        int currentTotal = requestCount.incrementAndGet();
+
+        System.out.println("Handling request #" + currentTotal);
+    }
+    public int getValue() {
+        return requestCount.get();
+    }
+}
+```
+
+But if you have 99 threads, only one Thread wins and the other 99 competes again. So don't use this for everything, only uses it when the task is small and the cost of retry is far smaller than nanoseconds of CPU's blocking.
+
+But remember that every non-primitive variable in Java is a [[JVM Architecture & WORA|Reference]], and a String is immutable, and it just changes the Reference to the [[Collections, Advanced Types & The Memory Cost|String Pool]]? That's why there's ` AtomicReference` , so you can decide, which one. 
+
+```java
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
+
+public  class Main {
+    public static void main(String[] args) {
+        Stats stats = new Stats();
+
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        for (int i = 0; i < 10; i++){
+            executor.submit(() -> {
+                stats.handleRequest();
+                stats.handleResponse();
+            });
+        }
+        executor.shutdown();
+    }
+}
+
+class Stats {
+    // This lives in the Shared Heap
+    private final AtomicInteger requestCount = new AtomicInteger(0);
+    private final AtomicReference<String> response = new AtomicReference("Initial Value");
+    public void handleRequest() {
+        // No 'synchronized' keyword needed!
+        // This uses the CPU's CAS instruction under the hood.
+        int currentTotal = requestCount.incrementAndGet();
+
+        System.out.println("Handling request #" + currentTotal);
+    }
+    public void handleResponse() {
+        int currentTotal = requestCount.incrementAndGet();
+        response.set("Response #" + currentTotal);
+        System.out.println(response);
+    }
+    public int getValue() {
+        return requestCount.get();
+    }
+}
+```
+
+### 3. Concurrent Collection - ConcurentHashMap🐧🖥 🐧🖥 🐧🖥
+> So remember [[Collections, Advanced Types & The Memory Cost|Collections]]? In Java they are not Thread-safe. You can bootstrap your way if you want to use ArrayList in a multi-threaded environtment. But for most of the jobs can be tackled with ConcurentHashMap.
+
+This is very complicated, but think of ConcurentHashMap as [[Memory|Page Table]]. So let's say a HashMap of Books is accessed by 4 Threads at the same time. If Thread-A access Book-1 which is located on Bucket 1 (A page), only that bucket is locked. 
+
+```java
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public  class Main {
+    public static void main(String[] args) {
+        ConcurrentHashMap<String, String> map = new ConcurrentHashMap<>();
+        Runnable runnable = () -> {
+          String threadName = Thread.currentThread().getName();
+          map.putIfAbsent(threadName, "Hello from " + threadName);
+          System.out.println(map.get(threadName));
+          System.out.println(map);
+          System.out.println("-------------------------");
+        };
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        for (int i = 0; i < 10; i++){
+            executor.submit(runnable);
+        }
+        executor.shutdown();
+    }
+}
+``` 
+
+Why `putIfAbsent`? put is a normal operation that could lead to zombie overriding between threads. Whereas putIfAbsent uses the Compare-And-Swap, which will make sure you are save.
+
+### 4. CountDownLatch - "How many chances left?" 🐧❓
+> So, let's say you have a use case that can't use Executor, and you need a way to manage workers efficiently instead of blind `.join`? This is where `CountDownLatch` comes in.
+> An atomic counter that make sure your Main-Thread can run immediately after all the prepping Thread is finished.
+
+```java
+import java.util.concurrent.CountDownLatch;
+
+public class Main {
+    public static void main(String[] args) throws InterruptedException {
+        // 1. Initialize with the number of tasks to wait for
+        CountDownLatch latch = new CountDownLatch(2);
+
+        // 2. Start Worker 1 (Database)
+        new Thread(() -> {
+            System.out.println("Connecting to Database...");
+            // Simulate work
+            latch.countDown(); // The "Buzzer" (-1)
+        }).start();
+
+        // 3. Start Worker 2 (Config)
+        new Thread(() -> {
+            System.out.println("Loading Config files...");
+            // Simulate work
+            latch.countDown(); // The "Buzzer" (-1)
+        }).start();
+
+        // 4. THE WAIT
+        System.out.println("Main thread waiting for setup...");
+        latch.await(); // This BLOCKS until counter hits 0
+
+        System.out.println("All systems GO! Starting your app.");
+    }
+}
+```
