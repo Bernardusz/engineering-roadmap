@@ -516,7 +516,7 @@ public class Main {
 > Yesterday we talked about Easy way, today we're doing Easy and Modern way of Threads. And yes I have slept, though it's not enough 🐧💀
 
 ### 1. Future & Callable - "Can I order a <Burger>?" 🍔🐧
-> Do you understand Async in Java? Yep this is similiar to that but for Threads. You declare what you want from a Thread and it will give it to you when it's ready, otherwise, wait ⏰🐧
+> Do you understand Async in JavaScript? Yep this is similiar to that but for Threads. You declare what you want from a Thread and it will give it to you when it's ready, otherwise, wait ⏰🐧
 
 ```java
 import java.util.concurrent.*;
