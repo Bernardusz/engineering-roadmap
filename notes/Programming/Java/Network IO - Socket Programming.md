@@ -324,3 +324,184 @@ public class Main {
 ```
 
 Next section.... which is today 🐧💀 We'll learn about Multi-Threaded server, and SSL and HTTPS to after this. Let me rest 💀
+
+## Security and Concurency - Day 3 🔒🐧
+> Well... It's the same day anyway... let's start.
+
+### 1. "No sniffing around!" - SSL & TSL, probably 🐧💀
+> So we know that data travels in bytes through the network. But anyone can take it. With tools anyone can sniff a normal HTTP request and take your data.
+> That's why SSL & TSL and by extension HTTPS exist.
+
+SSL (Secure Sockets Layer) is old an technically deprecated, so we'll talk about TSL (Transport Layer Security) only. Even though it's called "SSL Certificate," it actually means TSL.
+
+So think of TSL like a lock. Everyone know the key/password to lock it, but there is another key/password to unlock it. So that, hacker they can take the bytes, but it's locked. And they only have the key to lock, what's the use in that 🐧💀
+
+1. First time you visit a website, the browser sends a list of supporter encryption algorithms and a random number to the server (like salting called Nonce - Number used once. So replay attacks won't happen)
+2. Your server picks the strongest algorithm and sends back its Public Certificate, the public locks taht follows the X.509 standard everyone have alongside:
+	1. The Public Key - Lock
+	2. Domain - Who are you
+	3. Issuer Name - Who signed the certificate
+	4. Validity Period - How long is this certificate valid
+	5. Serial Number - A unique identifier by Certificate Authority
+	6. Digital Signature - A mathematical proof that the data hasn't been tampered with
+3. The browser checks the certificate. As a note, `localhost` where our server ran isn't owned by anyone, so CA can't really know it's you 💀🐧.
+4. The browser creates a Pre-Master secret, and encrypts it with you public key. Only your private key stored in your `.p12` in the server can unlock it.
+5. Your Server unlocks the locked Pre-Master Secret.
+6. Both sides now have a shared Session Key, now all your HTTP request is locked behind this TSL tunnel, making it an HTTP Secure (HTTPS) 🐧🐧
+
+And as a note, to prevent Replay Attacks, this process is repeated many times. A new tab, refresh, server restart, you name it.
+### 2. "Just add Virtual Threads!" - Concurency 🐧🐧🐧🐧
+> This isn't really a section, because we have covered [[Process & Threads - Java|Threads & Virtual Threads]] already. So, now we'll implement Secure & Concurrent Mini-server.
+
+```java
+import javax.net.ssl.*;
+import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.security.KeyStore;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class Main {
+    public static void main(String[] args) throws Exception {
+        char[] password = "password".toCharArray();
+        KeyStore keyStore = KeyStore.getInstance("PKCS12");
+        try (FileInputStream fis = new FileInputStream("keystore.p12");) {
+            keyStore.load(fis, password);
+        }
+
+        KeyManagerFactory keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+        keyManagerFactory.init(keyStore, password);
+
+        SSLContext sslContext = SSLContext.getInstance("TLS");
+        sslContext.init(keyManagerFactory.getKeyManagers(), null, null);
+
+        SSLServerSocketFactory sslServerSocketFactory = sslContext.getServerSocketFactory();
+        try (
+            SSLServerSocket serverSocket = (SSLServerSocket) sslServerSocketFactory.createServerSocket(8443);
+            ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+        ) {
+            while (true) {
+                SSLSocket clientSocket = (SSLSocket) serverSocket.accept();
+                executor.submit(() -> {
+                    try(
+                        clientSocket;
+                        PrintWriter printWriter = new PrintWriter(clientSocket.getOutputStream(), true);
+                        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+                    ){
+                        try{
+                            clientSocket.startHandshake();
+                            handleRequest(clientSocket, bufferedReader, printWriter);
+                        }
+                        catch (IOException e){
+                            send500(printWriter);
+                        }
+                    }
+                    catch (IOException e){
+                        e.printStackTrace();
+                    }
+                });
+            }
+        }
+    }
+    public static void handleRequest(SSLSocket clientSocket, BufferedReader bufferedReader, PrintWriter printWriter) throws IOException {
+        System.out.println("Client connected: " + clientSocket.getInetAddress());
+        String line = bufferedReader.readLine();
+        if (line == null) return;
+
+        String[] parts = line.split(" ");
+        String method = parts[0];
+        String path = parts[1];
+        if (path.equals("/")) {
+            path = "/index.html";
+        }
+        Path filePath = Path.of("static/", path.substring(1));
+
+        int contentLength = 0;
+        String header;
+
+        while (!(header = bufferedReader.readLine()).isEmpty()) {
+            if (header.startsWith("Content-Length:")) {
+                contentLength = Integer.parseInt(header.split(":")[1].trim());
+            }
+        }
+
+        switch (method) {
+            case "GET" -> handleGet(filePath, printWriter, clientSocket.getOutputStream());
+            case "POST" -> handlePost(filePath, contentLength, bufferedReader, printWriter);
+            case "PUT" -> handlePut(filePath, contentLength, bufferedReader, printWriter);
+            case "DELETE" -> handleDelete(filePath, printWriter);
+            default -> sendStatus(printWriter, "400 Bad Request");
+        }
+    }
+
+    private static void send500(PrintWriter out) {
+        out.println("HTTP/1.1 500 Internal Server Error");
+        out.println("Content-Type: text/html");
+        out.println("Connection: close");
+        out.println(); // The empty line that separates headers from body
+        out.println("<html><body><h1>500 Internal Server Error</h1><p>Mini-Tomcat encountered a problem.</p></body></html>");
+        out.flush();
+    }
+
+    public static void handleGet(Path path, PrintWriter printWriter, OutputStream outputStream) throws IOException {
+        if (Files.exists(path) && !Files.isDirectory(path)) {
+            long fileSize = Files.size(path);
+            String contentType = Files.probeContentType(path);
+            if (contentType == null) {
+                if (path.toString().endsWith(".css")) contentType = "text/css";
+                if (path.toString().endsWith(".js")) contentType = "application/javascript";
+            }
+
+            printWriter.println("HTTP/1.1 200 OK");
+            printWriter.println("Content-Type: " + contentType);
+            printWriter.println("Content-Length: " + fileSize);
+            printWriter.println();
+            printWriter.flush();
+
+            Files.copy(path, outputStream);
+        } else {
+            sendStatus(printWriter, "404 Not Found");
+        }
+    }
+
+    private static void handlePost(Path path, int length, BufferedReader bufferedReader, PrintWriter printWriter) throws IOException {
+        StringBuilder body = new StringBuilder();
+        int read;
+        int totalRead = 0;
+        while (totalRead < length && (read = bufferedReader.read()) != -1) {
+            body.append((char) read);
+            totalRead++;
+        }
+        Files.writeString(path, new String(body));
+        sendStatus(printWriter, "200 OK");
+    }
+
+    private static void handlePut(Path path, int length, BufferedReader bufferedReader, PrintWriter printWriter) throws IOException {
+        boolean exists = Files.exists(path);
+        StringBuilder body = new StringBuilder();
+        int read;
+        int totalRead = 0;
+        while (totalRead < length && (read = bufferedReader.read()) != -1) {
+            body.append((char) read);
+            totalRead++;
+        }
+        Files.writeString(path, new String(body));
+        sendStatus(printWriter, exists ? "200 OK" : "201 Created");
+    }
+    private static void handleDelete(Path path, PrintWriter printWriter) throws IOException {
+        if (Files.deleteIfExists(path)){
+            sendStatus(printWriter, "204 No Content");
+        } else {
+            sendStatus(printWriter, "404 Not Found");
+        }
+    }
+    private static void sendStatus(PrintWriter writer, String status) {
+        writer.println("HTTP/1.1 " + status);
+        writer.println();
+        writer.flush();
+    }
+}
+```
+
+Now I am gonna be doing other assignments, I have tight time 🐧💀
