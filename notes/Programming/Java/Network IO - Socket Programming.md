@@ -12,21 +12,24 @@
 > While Server is a program that serves other programs. It is the **Software** that is bind to a certain ports, ready to accept request
 
 #### Socket & FD
-> So, In Unix and Linux, everything is a file ([[System Calls (Syscalls)|System Calls]]). You write to a buffer, and the OS translates what is in the buffer to the tuple needed for Socket.
-> Socket is the one FD pointed to. Think of it like a a mailing post office. You don't know how, you just put your packet (Data) in the post office (FD -> Socket) and write your address so your Network Card can send them.
+> So, In Unix and Linux, everything is a file ([[System Calls (Syscalls)|System Calls]]). You write to a buffer. And the OS will handle the TCP/IP processing, breaking down what is in the buffer (data) to send the segments, adding addressing information through the network depending on the destination
+> Socket is the one FD pointed to. Think of it like a bidirectional highway specialized for communication between client and the server. it manages communication between client and server. When you `write` to socket FD, it means you're dumping the data to the socket buffer.
+> Then the OS will take that data, breaks it down following the TCP/IP protocol, and sends it down the next layer, which is located in the OS will tape the IP and Mac Address. Travels down the switch to the Router, to Modem and travels to the rest of the world.
 
 Suddenly OSI layers make sense to me because of this 🐧💀
 
 ### 3. "How many people can I talk to?" - 🐧❓
-> This is a quick section, because I am tired 🐧💀 So in IP Address (Which I learned in TKJ 💀🐧) you know that `127.0.0.1` is reserved for callback IP, what is it? When you bind your program to this IP, it means it's bind to localhost, and limited to all the programs inside your host/PC
-> While `0.0.0.0` means non-routeable or empty IP Address. It can also mean this host on the network. Which will make your server accesible for anyone in the network if they access your IP Address on the network and the port. Or in other terms: "I don't care whether they come from the front door (Network), backdoor (Ethernet), or even the window (VPN). As long as it's my room (Port), let them in." - 🐧💀
+> This is a quick section, because I am tired 🐧💀 So in IP Address (Which I learned in TKJ 💀🐧) you know that `127.0.0.1` is reserved for loopback IP, what is it? When you bind your program to this IP, it means it's bind to localhost, and limited to all the programs inside your host/PC
+> While `0.0.0.0` means bind to all available network interfaces. It can also mean this host on the network. Which will make your server accesible for anyone in the network if they access your IP Address on the network and the port. Or in other terms: "I don't care whether they come from the front door (Network), backdoor (Ethernet), or even the window (VPN). As long as it's my room (Port), let them in." - 🐧💀
 
 ### 4. Java Socketing - ServerSocket & Socket
 > So in C, we need to bind our process to a port and starts listening. But Java already handles that with `ServerSocket`. It automatically binds your program to a Port and listen, though to accept connection you need to do `socket.accept()`
 > You must know that `.accept()` is a blocking call. Your program will halt until a client connects.
 > And once a Client connect you will get a `Socket` object, resembling the FD for each connection the Socket maintains. It writes to the FD.
 
-But how do we not run out of FD? Modern VPS can change their limit of FD from 1024 to 65,535 or even 1,048,576. And it's so small, you don't even need to worry.
+But how do we not run out of FD? Modern VPS can change their limit of FD from 1024 to 65,535 or even 1,048,576. And the size of each Socket is so small, you don't even need to worry.
+
+BUT, You still need to close each connection once they're finished. Because File Descriptor leak is a real problem and "I'll close it later" might be the last words your server will ever hear 💀🐧
 
 ```java
 import java.io.BufferedReader;
@@ -67,7 +70,7 @@ public class Main {
 
 We use BufferedLine so we can grab and read per line and not spamming the CPU with System Calls 🐧💀
 
-We use PrintWriter so we don't need to flush manually nor forget it 🐧💀 and so that Error doesn't brick the request, and PrintWriter swallows the error and silently fail.
+We use PrintWriter so we don't need to flush manually nor forget it 🐧💀 and so that Error doesn't brick the request, and PrintWriter swallows the error and silently fail. Though it is actually bad. In a server you want to catch exception and severs the bad request immediately.
 
 BUT, You remember `.accept()` is blocking, and after connected we immediately serve the first client. So if another client connect, they... will be put in a waiting list (50-128 slots) or ignored (Waiting room filled or client's own timeout) 💀🐧
 
@@ -91,7 +94,7 @@ Penguin can stand alone. But Skull... somehow I feel it's incomplete without pen
 ### 2. "Can I order a `index.html` ?" - HTTP, Probably 🐧💀
 > So RESTful API was intented to follow HTTP protocol as much as possible. Not the other way around. So `GET`, `POST`, statuses came from HTTP.
 
-HTTP Request usually only comes in 3 lines:
+HTTP Request usually only comes in 3/4 sections:
 
 1. The Request Line
 	> Remember that the server is passive? This line tells your server what to do. You need to parse this line. IT includes a verb (GET/POST/PUT/DELETE), the thing you wanna get, and the HTTP version.
@@ -99,6 +102,7 @@ HTTP Request usually only comes in 3 lines:
 	> These are like extra information for someone: "My house has a ... color fence" or "I am verified, let me in"
 3. The Empty LIne
 	> HTTP Protocol dictates that headers must end with a double new line; `\r\n\r\n`
+4. Optional Body for `POST`/`PUT` and `GET` response.
 
 This is only for `GET` and `DELETE`. for `POST` and `PUT` will be disscused later, because we need to have `Content-Length` and `Content-Type`
 
@@ -198,7 +202,7 @@ Content-Length is only how many bytes/how big is it, but Content-Type... oh boy 
 | ---------- | -------------------------- | ----------------------------------- |
 | HTML       | `text/html`                | The structure of your page.         |
 | CSS        | `text/css`                 | The styling and layout              |
-| JavaScript | `text/javascript`          | The logic/interactivity             |
+| JavaScript | `application/javascript`          | The logic/interactivity             |
 | PNG        | `image/png`                | Lossless images.                    |
 | JPEG       | `image/jpeg`               | Standard photos                     |
 | GIF        | `image/gif`                | Animated or simple images           |
@@ -206,7 +210,7 @@ Content-Length is only how many bytes/how big is it, but Content-Type... oh boy 
 | JSON       | `application/json`         | The standard for sending data       |
 | XML        | `application/xml`          | Older data format                   |
 | Plain Text | `text/plain`               | Raw text with no formatting         |
-| Raw Bytes  | `application/octet-streat` | Usually used for downloading files. |
+| Raw Bytes  | `application/octet-stream` | Usually used for downloading files. |
 
 So with everything out of the way, let's write a blocking, single-threaded GET/POST/PUT/DELETE server.
 
@@ -328,13 +332,13 @@ Next section.... which is today 🐧💀 We'll learn about Multi-Threaded server
 ## Security and Concurency - Day 3 🔒🐧
 > Well... It's the same day anyway... let's start.
 
-### 1. "No sniffing around!" - SSL & TSL, probably 🐧💀
+### 1. "No sniffing around!" - SSL & TLS, probably 🐧💀
 > So we know that data travels in bytes through the network. But anyone can take it. With tools anyone can sniff a normal HTTP request and take your data.
-> That's why SSL & TSL and by extension HTTPS exist.
+> That's why SSL & TLS and by extension HTTPS exist.
 
-SSL (Secure Sockets Layer) is old an technically deprecated, so we'll talk about TSL (Transport Layer Security) only. Even though it's called "SSL Certificate," it actually means TSL.
+SSL (Secure Sockets Layer) is old an technically deprecated, so we'll talk about TLS (Transport Layer Security) only. Even though it's called "SSL Certificate," it actually means TLS.
 
-So think of TSL like a lock. Everyone know the key/password to lock it, but there is another key/password to unlock it. So that, hacker they can take the bytes, but it's locked. And they only have the key to lock, what's the use in that 🐧💀
+So think of TLS like a lock. Everyone know the key/password to lock it, but there is another key/password to unlock it. So that, hacker they can take the bytes, but it's locked. And they only have the key to lock, what's the use in that 🐧💀
 
 1. First time you visit a website, the browser sends a list of supporter encryption algorithms and a random number to the server (like salting called Nonce - Number used once. So replay attacks won't happen)
 2. Your server picks the strongest algorithm and sends back its Public Certificate, the public locks taht follows the X.509 standard everyone have alongside:
@@ -347,9 +351,23 @@ So think of TSL like a lock. Everyone know the key/password to lock it, but ther
 3. The browser checks the certificate. As a note, `localhost` where our server ran isn't owned by anyone, so CA can't really know it's you 💀🐧.
 4. The browser creates a Pre-Master secret, and encrypts it with you public key. Only your private key stored in your `.p12` in the server can unlock it.
 5. Your Server unlocks the locked Pre-Master Secret.
-6. Both sides now have a shared Session Key, now all your HTTP request is locked behind this TSL tunnel, making it an HTTP Secure (HTTPS) 🐧🐧
+6. Both sides now have a shared Session Key, now all your HTTP request is locked behind this TLS tunnel, making it an HTTP Secure (HTTPS) 🐧🐧
 
 And as a note, to prevent Replay Attacks, this process is repeated many times. A new tab, refresh, server restart, you name it.
+
+SIKE 🐧💀 I just realize I explaned the outdated RSA. In modern TLS, We use Diffie-Hellman. Let me (try to) explain it aight 💀
+
+We have 6 Variables; 2 private and 4 public.
+
+1. We start with 2 numbers everyone can see and agree upon. p, a very large prime number (modulus) and *g*, a base number.
+2. Then Client picks a secret number *a*, but we'll call them and the same for server with *b*. These numbers never leave the machine, nor they need to due to a magic called *Math* 🐧💀 So these 2 are the Private Variables.
+3. Both Server and Client send each other *A = g^a (mod p)*, meaning "the modululus of p to the base number to the power of a." The same with Server just with b.
+4. Now here is the magic. Both perform one last forumula: *S = B^a (mod p)* and *S = A^b (mod p)* now they end with the same number that is the password of each HTTP request.
+
+Do I understand? NO 💀🐧. But at least I get the hang of it. The reason this is more secure is that, if your server is hacked or someone compromised your .p12 file, or even worse push your .p12 file to GitHub... 🐧💀 Yeah.
+
+But everything in Diffie-Hellman is temporary during handshake, so it's safer.
+
 ### 2. "Just add Virtual Threads!" - Concurency 🐧🐧🐧🐧
 > This isn't really a section, because we have covered [[Process & Threads - Java|Threads & Virtual Threads]] already. So, now we'll implement Secure & Concurrent Mini-server.
 
@@ -505,3 +523,19 @@ public class Main {
 ```
 
 Now I am gonna be doing other assignments, I have tight time 🐧💀
+
+---
+
+Post-Mortem.
+
+I messed up in the video, stuttered a lot and didn't fully understand the TLS implementation. I also messed up a bit in this notes:
+
+1. It's TLS, not TSL. I did a Typo.
+2. It's Loopback IP, not Callback. The reason it's called Loopback is because it never leaves the Device via Network Interface Card, rather it goes back to the machine.
+3. The TLS handshake is outdated. What I explained was RSA Key Exchange. While not necessarily wrong, it is OUTDATED. I added explanation for Diffie-Hellman Key Exchange that uses Math as a way to securely send messages.
+4. Minor typo, it is "application/octet-stream" not streat.
+5. So my note about Swallowing Errors in `PrintWriter` is bad. We need to know what's wrong in real time and catch the exception.
+6. JavaScript actually is an application datat type in MIME type, not text.
+7. And the reason this is confusing is, I took OSI layer literally. Like word to word instead of using it like a map. That's why I am confused; "Why is switch lower the layer on layer 2 compared to router in layer 3 when we hit switch first before router 💀🐧?" or "Bro, to connect the PC to switch it travels through cables. It's layer 1 already 🐧💀"
+
+I haven't understood my implementation in the last code, but I am gonna change it in my Mini-Tomcat implementation with the latest TLS and most robust 💀🐧.
