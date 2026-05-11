@@ -197,13 +197,13 @@ Final Safe Counter: 2000000
 
 ### Lifecycle & States
 
-| Process | Explanation |
-|----------|--------------|
-| New | Happens milliseconds after your program, like ```./main``` is called, the process of spinning out a new process with Virtual Memory, Virtual Address, etc. |
-| Ready | Ready is when your program is ready to execute and is put in a queue, waiting for its main entry (```int main()```). Your CPU may still be busy from VS Code and Chrome, so it's here |
-| Running | After your program gets its turn, it's executed immediately. |
-| Waiting | Now, let's say you need Inter-Process Communication or waiting for a user input that's slow. This is where your program is put on a waiting list, so the CPU can do something else. This is Time Slicing in action, and Context Switching happens a lot in milliseconds.|
-| Terminated | When your program reaches ```return 0;``` or ```exit(0)``` your program gets cleaned up, memory is deallocated. |
+| Process    | Explanation                                                                                                                                                                                                                                                              |
+| ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| New        | Happens milliseconds after your program, like ```./main``` is called, the process of spinning out a new process with Virtual Memory, Virtual Address, etc.                                                                                                               |
+| Ready      | Ready is when your program is ready to execute and is put in a queue, waiting for its main entry (```int main()```). Your CPU may still be busy from VS Code and Chrome, so it's here                                                                                    |
+| Running    | After your program gets its turn, it's executed immediately.                                                                                                                                                                                                             |
+| Waiting    | Now, let's say you need Inter-Process Communication or waiting for a user input that's slow. This is where your program is put on a waiting list, so the CPU can do something else. This is Time Slicing in action, and Context Switching happens a lot in milliseconds. |
+| Terminated | When your program reaches ```return 0;``` or ```exit(0)``` your program gets cleaned up, memory is deallocated.                                                                                                                                                          |
 
 ```main.c
 #include <stdio.h>
