@@ -1,6 +1,8 @@
 # 📃 Wait-Less Task Board
 > A simple Kanban board, utlizing Analog/Angular ecosystem.
 
+Link: <https://github.com/Bernardusz/kanban-board>
+
 ## 💻 Tech
 - Spring Boot
 - Virtual Threads

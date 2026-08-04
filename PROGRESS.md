@@ -8,6 +8,8 @@
 
 > Every time I finished a domain
 
+---
+
 ## © C - System Thinking Era (```January - Febuary 2026```)
 
 > I started this domain becauyse I actually want to understand how computers work behind the scenes, now that ~1.5-2 months have passed, let's see where are we now.
@@ -29,6 +31,8 @@
 ### ✨Outcome
 
 > Stop being scared of low-level concepts and knowing how a computer works (No magic indeed 🐧) - Yes, no magic indeed 🐧
+
+---
 
 ## 🏨 Java - Structured Thinking (```March - April 2026```)
 
@@ -56,3 +60,27 @@ And I know I should've went for CLI... BUT I created Levtus: <https://github.com
 
 ✨Outcome
 > Know how large codebases stay sane - Yep I understood now how large codebasses stay intact: OOP provided the structure, and you don't thinker with what you don't need to 🐧
+
+---
+
+### ♨Spring Boot: Java - Robust Backend (```May - July 2026```)
+
+> Started Spring Boot in May after Java. It was very structurd, I like it.
+
+ 📖 What I'll learn:
+
+- REST APIs - All my projects are written in Analog.js + Spring Boot except feedback-wall and personallibrary
+- SQL-first mindset - I used JdbcClient in all of my project, making me learn SQL
+- Validation and error handling - I learned about Global exception Handler in Spring
+- Auth basic - I learn about Spring security deeply in [vault](https://github.com/Bernardusz/vault) theoretically and in [cms](https://github.com/Bernardusz/content-management-system) practically
+- Layered architecture - I learned about Spring layers: Controller, Service, and Repository
+- DTOs - Java is a strongly typed language, so incoming and outcoming data must have a type: Record for Java
+- Know what's behind backend abstractions - I learned about Spring Framework, Spring Boot and, Spring Security deply in [vault](https://github.com/Bernardusz/vault)
+
+📚 Projects
+
+- 1 Small project (Todo app) - All of my apps are able to do CRUD.
+- One big backend app - I have created [cms](https://github.com/Bernardusz/content-management-system), which physically aged me because of the security 🐧💀
+
+✨Outcome
+> Understand what is behind the modern backends' abstractions and understand how enterprises write sane code. - Yep understand Spring Structure and what's behind it
