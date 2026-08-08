@@ -89,3 +89,105 @@ Just like TypeScript, when calling a method on a nullable, to be safe, use the `
 But in Kotlin, we have what is called the Elvis operator. If the left side is null, what is on the right of the Elvis operator will be returned instead.
 
 That is it for day 1 🐧🐧🐧🐧
+
+## Null Safety, Extensive - Day 2
+> **Shalom**! 🐧🐧🐧 Welcome back. Now we're finishing the Kotlin tour of the doccumentation, and I'll put what is relevant to our documentation of Null Safety aight
+
+### 1. Scope function, reducing the explosion radius 💀🐧
+> So we know scope, something inside `{}` that is considered a local scope and cannot be accessed globally. But now in Kotlin we have 5 function scope... And I found one exceptionally good at Null Safety. We won't dive deep into all 5, but we'll focus on `let`.
+
+`let` is an scope function, which is a part of generic extension function on type `T`. It's primary use case, as defined in <https://kotlinlang.org/docs/kotlin-tour-intermediate-scope-functions.html#let> is to perform null check.
+
+Though it can do so much more because it returns the lambda result. `let` is different than `run` because `run`'s primary usage is for initialization and modifying the variable at the same time. Both return the lambda's result, but it's just pedantic usage. So you can say `let` is for quick computation; perfect for null checking.
+
+```kotlin
+val confirm: Boolean = address?.let { 
+    sendNotification(it) 
+}
+```
+
+`let` only executes if the object is not null. And because `sendNotification`returns an object (String in Kotlin's docs, but for convinient we'll use Boolean here), it'll be null if the object is null. And remember Elvis operator? You can use it also here!
+
+```kotlin
+val confirm: Boolean = address?.let { 
+    sendNotification(it) 
+} ?: false
+```
+
+`sendNotification` sends true if the object is not null, and if it does null we can safely return to false. Safe indeed 🐧🐧🐧🐧
+
+### 2. Delegation - Slashing Boilerplate 🐧⚔️
+>  So ever wonder how can you reduce boilerplate when handling with inheritance? Well say no more; Delegation
+
+
+```
+interface Printer {
+    fun print()
+}
+
+class FastPrinter : Printer {
+    override fun print() = println("Printing fast...")
+}
+
+// ✅ WORKS: Printer is an interface
+class SmartPrinter(delegate: Printer) : Printer by delegate
+```
+
+So with Inheritance, when you change even the slighest code of the parent class, you risk breaking the whole chain of scheme 🐧💀, that's where delegation comes in. It allows you do define a default method, but pass any concrete implementation.
+
+```kotlin
+class Derived: Base // I promise to implement the Base, so I must write all the code for Base myself
+class Derived: BaseInterface // I will pass the blueprint, and you must implement everything yourself
+class Derived(private val b: BaseInterface): BaseInterface by b // You need to pass any concrete class implementation, but it will automatically be set, so you don't need to override everything (isEmpty, and size() will point to b)
+class DerivedConcrete(private val b: BaseInterface = Base { println("Default") }
+) : BaseInterface by b {
+} // You can pass any concrete implementation, but if not I already have the default anyway
+```
+
+### 3. Objects - Hold my data 🐧🍷
+> So I didn't explain this yesterday. But to replace POJO, Kotlin has what is called data class. It holds your data, and you can get the data immediately, like Record. But whether it is mutable or not is based on your decision.
+
+So now, we have `object` keyword. This basically means; Singleton class. It acts as a singleton that can hold data and function without any declaration. A cleaner way to do Singleton. And as a fun fact, Kotlin doesn't have `static` keyword, it is replaced by this.
+
+And as fun fact, Objects are lazy, so they don't get instantiated until you call them.
+
+There are 3 Objects
+
+| Objects          | Description                                                                                                      | Functionality                                                                          | Keyword                      |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- | ---------------------------- |
+| Plain object     | A classic singleton that holds data and method                                                                   | It is used for utility classes, helpers, or singletons holding functionality           | `object ClassName`           |
+| Data Object      | A singleton that holds data specifically. It can hold method, but most commonly used for data holding singletons | It is used when the object represents a named state or event inside a sealed hierarchy | `data object ClassName`      |
+| Companion Object | One companion per class, similiar to static class inside a class.                                                | It is used when all instances of a class need shared information                       | `companion object ClassName` |
+
+### 4. Special Classes - What are these man 🐧🐧💀💀
+> So now Kotlin, has special classes. Now Kotlin's learning curve is soo steep man, why do they have too many features 💀. Okay, it is just me, I don't need these all, but I want to doccument them for future me; SO here we go 🐧🐧🐧🐧
+
+#### Sealed Class
+> By default Class are final and public. Sealed class is by default abstract and package private. You need concrete implementation, and because it is not inheritable outside of the package, you can't use it. It is limited to the same package and module. With the exception of Kotlim Multiplatform same sourceset
+
+#### Enum Class
+> I don't even know why I doccument this, but Java's enum is Kotlin's `enum class`, they just add class to make it more explicit.
+
+#### Inline Value Classes
+> Ever dreaded that moment, where you are confused why is the email is saved as password and vice versa 🐧💀? Yeah me too. SO that's why Inline Value exists. Without paying a heavy performance tax, we can create inline value with method so we don't confused `Email` with `Password`.
+
+### 5. Type Checking & Casting
+> So simple;
+
+- `is` checks if the type is the same,
+- `!is` checks if the type is not the same and returns a boolean value
+- `as` to cast an object to any other type (includes nullable -> non-nullable), but if it isn't possible, the program crashes, hence the unsafe.
+- `as?` To explicitly casr and object to non-nullable type bur return null without crashing, this is the operator
+
+#### List Null Safety
+>  Kotlin provides several safety measures out of the box for lists:
+- `filterNotNull()` to return a list with non null values
+- listOfNotNull() to create a list that doesn't allow null
+ And if all items are null, an empty list is returned.
+
+Kotlin also provides function to find values in collections that returns null isntead of triggering an error:
+- `maxOrNull()` -> The highest value or null
+- `minOrNull()` -> The lowest value or null
+- `singleOrNull` -> Takes a lambda and return the object that matches the lambda or null
+- `firstNotNullOfOrNull()` -> Takes a lambda and return the first value that isn't null.
+- `reduceOrNull()` To create a lambda expression to process each collection item sequentially and create an accumulated value or null if the collection is empty.
