@@ -84,3 +84,20 @@ And I know I should've went for CLI... BUT I created Levtus: <https://github.com
 
 ✨Outcome
 > Understand what is behind the modern backends' abstractions and understand how enterprises write sane code. - Yep understand Spring Structure and what's behind it
+
+### 🍃Kotlin - Language upgrade (```August 2026``` - Extended into Half of September)
+
+> Cleaner Java + Modern thinking
+
+ 📖 What I'll learn:
+
+- Null safety - Kotlin has built in Null safety. And like TypeScript to have nullable we have to describe it
+- Functional style - Kotlin is a mix of OOP and FP. And because it is in JVM, I like it 💀🐧
+- Concise syntax - Definitly cleaner than Java. It is maybe Bias due to long Java 25 exposure, but I'll get used to Kotlin idiomatic syntax.
+
+📚 Projects
+
+- 2 - 3 CLI app - Now I have decided, I ran out of CLI to create 🐧💀 A mix of Personal Issues (Mainly hard procrastination 💀) I didn't create any CLI. I'll focus my energy on Spring Boot
+
+✨Outcome
+> Understand how modern devs think and code - Yep, Modern Devs produce cleaner code (either less or more, as long as it is clean), while pedantic usage of a language is encouraged, as long as your code work, highly performant (according to your need), and clean, Good 🐧👍️
