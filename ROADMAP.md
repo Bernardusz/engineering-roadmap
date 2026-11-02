@@ -104,7 +104,7 @@
 ✨Outcome
 > Understand how modern devs write scalable, clean, and robust backend
 
-### ☕Nest.js (```November 2026```)
+### 🍸️ LKS Sprint(```November 2026```)
 
 > Test whether I am truly framework agnostic
 
@@ -116,7 +116,10 @@
   
 📚 Projects
 
-- 1 Backend service (Not huge)
+- 1 Laravel Project
+- 1 Vue Project
+- 1 Raw DOM Manipulation Project
+- 1 Week of mocking LKS Sprint from finals
   
 ✨Outcome
 > Become a truly framework-agnostic guy

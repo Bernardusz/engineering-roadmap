@@ -1,6 +1,8 @@
 # 🎫 Event Booking & Ticketing Engine - Week 1 & 2 of Spring Boot Kotlin
 > An app that is used to book events to make sure booking stays strong during peak hours.
 
+Link: <https://github.com/Bernardusz/booking-ticketing>
+
 ## 💻 Tech
 - Kotlin
 - Spring Boot
